@@ -13,5 +13,9 @@ export type RootStackParamList = {
   Tabs: NavigatorScreenParams<TabParamList>;
   VentureTypeSelector: { categoryName: string };
   ServiceList: { categoryName: string; ventureType: VentureType };
-  ServiceDetail: { service: Service };
+  // editCartItemId: present when arriving from Cart to edit an existing item,
+  // absent for a brand-new addition.
+  ServiceDetail: { service: Service; editCartItemId?: string };
+  Cart: undefined;
+  Address: undefined;
 };

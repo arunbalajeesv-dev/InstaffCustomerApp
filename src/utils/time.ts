@@ -1,5 +1,19 @@
 const TWO_HOURS_MS = 2 * 60 * 60 * 1000;
 const DAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+const MONTH_LABELS = [
+  'Jan',
+  'Feb',
+  'Mar',
+  'Apr',
+  'May',
+  'Jun',
+  'Jul',
+  'Aug',
+  'Sep',
+  'Oct',
+  'Nov',
+  'Dec',
+];
 
 export type DayOption = {
   key: string; // yyyy-mm-dd, local
@@ -38,6 +52,12 @@ export function formatTimeOfDay(minutesFromMidnight: number): string {
   const period = hour24 >= 12 ? 'PM' : 'AM';
   const hour12 = hour24 % 12 === 0 ? 12 : hour24 % 12;
   return `${hour12}:${String(minute).padStart(2, '0')} ${period}`;
+}
+
+// An absolute label (not relative like "Today"), since cart items may be
+// viewed well after the day they were picked. e.g. "Mon, Sep 23".
+export function formatDayDisplay(date: Date): string {
+  return `${DAY_LABELS[date.getDay()]}, ${MONTH_LABELS[date.getMonth()]} ${date.getDate()}`;
 }
 
 function slotDateTime(dayDate: Date, minutesFromMidnight: number): Date {

@@ -1,9 +1,9 @@
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RouteProp } from '@react-navigation/native';
-import { useRoute } from '@react-navigation/native';
+import { useNavigation, useRoute } from '@react-navigation/native';
 import { useEffect, useMemo } from 'react';
 import {
   ActivityIndicator,
-  Alert,
   Image,
   ScrollView,
   StyleSheet,
@@ -20,6 +20,7 @@ import { ScreenHeader } from '../components/ScreenHeader';
 import { TierSelector } from '../components/TierSelector';
 import { TierSummaryCard } from '../components/TierSummaryCard';
 import { TimeSlotGrid } from '../components/TimeSlotGrid';
+import { useCartStore } from '../store/useCartStore';
 import { useServiceDetailStore } from '../store/useServiceDetailStore';
 import { useServiceSelectionStore } from '../store/useServiceSelectionStore';
 import { colors, radius, spacing } from '../theme';
@@ -27,10 +28,13 @@ import type { RootStackParamList } from '../types';
 import { formatINR } from '../utils/currency';
 import {
   START_TIME_OPTIONS_MINUTES,
+  formatDayDisplay,
   formatTimeOfDay,
   getNext7Days,
   isSlotDisabled,
 } from '../utils/time';
+
+type Nav = NativeStackNavigationProp<RootStackParamList>;
 
 type Route = RouteProp<RootStackParamList, 'ServiceDetail'>;
 
@@ -39,11 +43,13 @@ type Route = RouteProp<RootStackParamList, 'ServiceDetail'>;
 const PLACEHOLDER_RATING = 4.8;
 
 export function ServiceDetailScreen() {
+  const navigation = useNavigation<Nav>();
   const { params } = useRoute<Route>();
-  const { service } = params;
+  const { service, editCartItemId } = params;
   const insets = useSafeAreaInsets();
 
   const { tiers, scopeItems, addons, loading, error, load } = useServiceDetailStore();
+  const { items: cartItems, addItem, updateItem } = useCartStore();
   const {
     serviceId,
     selectedTierId,
@@ -51,18 +57,38 @@ export function ServiceDetailScreen() {
     selectedDate,
     selectedStartTime,
     selectedEndTime,
-    selectService,
     selectTier,
     incrementAddon,
     decrementAddon,
     selectDate,
     selectStartTime,
+    startNewSelection,
+    loadSelection,
   } = useServiceSelectionStore();
 
   useEffect(() => {
     load(service.id);
-    selectService(service.id);
-  }, [load, selectService, service.id]);
+    const editingItem = editCartItemId
+      ? cartItems.find(i => i.id === editCartItemId)
+      : undefined;
+    if (editingItem) {
+      loadSelection({
+        serviceId: service.id,
+        tierId: editingItem.tier.id,
+        addonQuantities: Object.fromEntries(
+          editingItem.addons.map(a => [a.addon.id, a.quantity]),
+        ),
+        date: editingItem.date,
+        startTime: editingItem.startTime,
+        endTime: editingItem.endTime,
+      });
+    } else {
+      startNewSelection(service.id);
+    }
+    // Only re-run when navigating to a (possibly different) service or edit
+    // target; cartItems is read once at that moment, not reactively.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [load, service.id, editCartItemId, loadSelection, startNewSelection]);
 
   // Selection belongs to whichever service is currently active; ignore stale
   // state left over from a previous ServiceDetail visit while it clears.
@@ -135,7 +161,34 @@ export function ServiceDetailScreen() {
   const total = (selectedTier?.price ?? 0) + addonsTotal;
   const includedItems = scopeItems.filter(item => item.isIncluded);
   const excludedItems = scopeItems.filter(item => !item.isIncluded);
-  const canAddToCart = !!selectedTier && !!activeDate && !!activeStartTime;
+  const canAddToCart = !!selectedTier && !!activeDate && !!activeStartTime && !!activeEndTime;
+
+  const handleAddToCart = () => {
+    if (!selectedTier || !activeDate || !activeStartTime || !activeEndTime) {
+      return;
+    }
+    const addonSelections = addons
+      .filter(addon => (activeAddonQuantities[addon.id] ?? 0) > 0)
+      .map(addon => ({ addon, quantity: activeAddonQuantities[addon.id] }));
+
+    const item = {
+      service,
+      tier: selectedTier,
+      addons: addonSelections,
+      date: activeDate,
+      dateDisplay: selectedDay ? formatDayDisplay(selectedDay.date) : activeDate,
+      startTime: activeStartTime,
+      endTime: activeEndTime,
+      linePrice: total,
+    };
+
+    if (editCartItemId) {
+      updateItem(editCartItemId, item);
+    } else {
+      addItem(item);
+    }
+    navigation.navigate('Cart');
+  };
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -262,8 +315,8 @@ export function ServiceDetailScreen() {
           testID="addToCartButton"
           style={[styles.cartButton, !canAddToCart && styles.cartButtonDisabled]}
           disabled={!canAddToCart}
-          onPress={() => Alert.alert('Added to cart', `${service.name} added to your cart.`)}>
-          <Text style={styles.cartButtonText}>Add to Cart</Text>
+          onPress={handleAddToCart}>
+          <Text style={styles.cartButtonText}>{editCartItemId ? 'Update Cart' : 'Add to Cart'}</Text>
         </TouchableOpacity>
       </View>
     </SafeAreaView>
