@@ -60,6 +60,14 @@ export function formatDayDisplay(date: Date): string {
   return `${DAY_LABELS[date.getDay()]}, ${MONTH_LABELS[date.getMonth()]} ${date.getDate()}`;
 }
 
+// "HH:MM:00" for a Postgres `time` column, e.g. 570 -> "09:30:00".
+export function formatTime24(minutesFromMidnight: number): string {
+  const totalMinutes = ((minutesFromMidnight % 1440) + 1440) % 1440;
+  const hour = Math.floor(totalMinutes / 60);
+  const minute = totalMinutes % 60;
+  return `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}:00`;
+}
+
 function slotDateTime(dayDate: Date, minutesFromMidnight: number): Date {
   const result = new Date(dayDate);
   result.setHours(0, minutesFromMidnight, 0, 0);

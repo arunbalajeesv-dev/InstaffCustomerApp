@@ -18,4 +18,6 @@ export type RootStackParamList = {
   ServiceDetail: { service: Service; editCartItemId?: string };
   Cart: undefined;
   Address: undefined;
+  Payment: { addressId: string };
+  BookingConfirmation: { bookingId: string; total: number };
 };

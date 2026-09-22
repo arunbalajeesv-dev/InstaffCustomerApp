@@ -1,4 +1,4 @@
-import { StyleSheet, Text, TouchableOpacity } from 'react-native';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { colors, radius, spacing } from '../theme';
 import type { CartItem } from '../types';
 import { formatINR } from '../utils/currency';
@@ -10,19 +10,25 @@ export function CartItemCard({
   onRemove,
 }: {
   item: CartItem;
-  onPress: () => void;
-  onRemove: () => void;
+  // Omit either for a read-only summary card (e.g. on the Payment screen):
+  // no remove button, and the card itself isn't tappable.
+  onPress?: () => void;
+  onRemove?: () => void;
 }) {
   const addonsLabel = item.addons.map(a => `${a.addon.name} ×${a.quantity}`).join(', ');
+  const Wrapper = onPress ? TouchableOpacity : View;
+  const wrapperProps = onPress ? { onPress, activeOpacity: 0.7 } : {};
 
   return (
-    <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.7}>
-      <TouchableOpacity
-        style={styles.removeButton}
-        onPress={onRemove}
-        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-        <Icon name="close" size={14} color="#FFFFFF" />
-      </TouchableOpacity>
+    <Wrapper style={styles.card} {...wrapperProps}>
+      {!!onRemove && (
+        <TouchableOpacity
+          style={styles.removeButton}
+          onPress={onRemove}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+          <Icon name="close" size={14} color="#FFFFFF" />
+        </TouchableOpacity>
+      )}
 
       <Text style={styles.name} numberOfLines={1}>
         {item.service.name}
@@ -37,7 +43,7 @@ export function CartItemCard({
         </Text>
       )}
       <Text style={styles.price}>{formatINR(item.linePrice)}</Text>
-    </TouchableOpacity>
+    </Wrapper>
   );
 }
 

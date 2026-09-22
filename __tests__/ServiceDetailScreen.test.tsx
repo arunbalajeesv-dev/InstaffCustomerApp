@@ -187,6 +187,8 @@ test('editing an existing cart item pre-fills its tier, add-ons and slot', async
     dateDisplay: 'Mon, Jan 15',
     startTime: '3:00 PM',
     endTime: '7:00 PM',
+    startTime24: '15:00:00',
+    endTime24: '19:00:00',
     linePrice: 4000,
   });
   mockEditCartItemId = existingId;

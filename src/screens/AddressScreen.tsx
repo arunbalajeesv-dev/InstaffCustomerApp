@@ -1,22 +1,49 @@
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { useNavigation } from '@react-navigation/native';
+import { useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
-import { Alert, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import {
+  ActivityIndicator,
+  Alert,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ScreenHeader } from '../components/ScreenHeader';
+import { createAddress } from '../services/addressesApi';
 import { colors, radius, spacing } from '../theme';
+import type { RootStackParamList } from '../types';
 
+type Nav = NativeStackNavigationProp<RootStackParamList>;
 type AddressFormValues = { address: string };
 
-// Placeholder: a plain text field for now. Google Maps (place search,
-// pin-drop, geocoding) gets wired in on top of this in a later phase.
+// Text field for now. Google Maps (place search, pin-drop, geocoding) gets
+// wired in on top of this in a later phase.
 export function AddressScreen() {
+  const navigation = useNavigation<Nav>();
+  const [saving, setSaving] = useState(false);
   const {
     control,
     handleSubmit,
     formState: { errors },
   } = useForm<AddressFormValues>({ defaultValues: { address: '' } });
 
-  const onSubmit = (values: AddressFormValues) => {
-    Alert.alert('Address saved', `${values.address}\n\nMap-based address entry is coming soon.`);
+  const onSubmit = async (values: AddressFormValues) => {
+    setSaving(true);
+    try {
+      const addressId = await createAddress(values.address);
+      navigation.navigate('Payment', { addressId });
+    } catch (e) {
+      Alert.alert(
+        "Couldn't save address",
+        e instanceof Error ? e.message : 'Something went wrong. Please try again.',
+      );
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -38,6 +65,7 @@ export function AddressScreen() {
               onBlur={onBlur}
               multiline
               numberOfLines={3}
+              editable={!saving}
             />
           )}
         />
@@ -45,9 +73,14 @@ export function AddressScreen() {
 
         <TouchableOpacity
           testID="continueButton"
-          style={styles.button}
+          style={[styles.button, saving && styles.buttonDisabled]}
+          disabled={saving}
           onPress={() => handleSubmit(onSubmit)()}>
-          <Text style={styles.buttonText}>Continue</Text>
+          {saving ? (
+            <ActivityIndicator color="#FFFFFF" />
+          ) : (
+            <Text style={styles.buttonText}>Continue</Text>
+          )}
         </TouchableOpacity>
       </View>
     </SafeAreaView>
@@ -77,5 +110,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginTop: spacing.lg,
   },
+  buttonDisabled: { opacity: 0.6 },
   buttonText: { color: '#FFFFFF', fontWeight: '700', fontSize: 15 },
 });

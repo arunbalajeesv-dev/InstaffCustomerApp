@@ -29,6 +29,7 @@ import { formatINR } from '../utils/currency';
 import {
   START_TIME_OPTIONS_MINUTES,
   formatDayDisplay,
+  formatTime24,
   formatTimeOfDay,
   getNext7Days,
   isSlotDisabled,
@@ -164,12 +165,19 @@ export function ServiceDetailScreen() {
   const canAddToCart = !!selectedTier && !!activeDate && !!activeStartTime && !!activeEndTime;
 
   const handleAddToCart = () => {
-    if (!selectedTier || !activeDate || !activeStartTime || !activeEndTime) {
+    if (
+      !selectedTier ||
+      !activeDate ||
+      !activeStartTime ||
+      !activeEndTime ||
+      selectedStartMinutes === null
+    ) {
       return;
     }
     const addonSelections = addons
       .filter(addon => (activeAddonQuantities[addon.id] ?? 0) > 0)
       .map(addon => ({ addon, quantity: activeAddonQuantities[addon.id] }));
+    const endMinutes = selectedStartMinutes + selectedTier.durationHours * 60;
 
     const item = {
       service,
@@ -179,6 +187,8 @@ export function ServiceDetailScreen() {
       dateDisplay: selectedDay ? formatDayDisplay(selectedDay.date) : activeDate,
       startTime: activeStartTime,
       endTime: activeEndTime,
+      startTime24: formatTime24(selectedStartMinutes),
+      endTime24: formatTime24(endMinutes),
       linePrice: total,
     };
 

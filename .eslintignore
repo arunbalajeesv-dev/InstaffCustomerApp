@@ -1,0 +1,3 @@
+# Deno runtime (Supabase Edge Functions) — separate environment/toolchain,
+# not part of this React Native app's lint config.
+supabase/functions/

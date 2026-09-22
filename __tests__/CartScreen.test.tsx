@@ -34,6 +34,8 @@ const item = {
   dateDisplay: 'Mon, Jan 15',
   startTime: '9:00 AM',
   endTime: '11:00 AM',
+  startTime24: '09:00:00',
+  endTime24: '11:00:00',
   linePrice: 2500, // 1500 tier + 2x500 addon
 };
 

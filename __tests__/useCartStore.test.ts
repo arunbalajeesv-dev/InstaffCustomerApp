@@ -22,6 +22,8 @@ const baseItem = {
   dateDisplay: 'Mon, Jan 15',
   startTime: '9:00 AM',
   endTime: '11:00 AM',
+  startTime24: '09:00:00',
+  endTime24: '11:00:00',
   linePrice: 1500,
 };
 

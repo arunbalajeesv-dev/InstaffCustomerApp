@@ -7,22 +7,17 @@ import { ScreenHeader } from '../components/ScreenHeader';
 import { useCartStore } from '../store/useCartStore';
 import { colors, radius, spacing } from '../theme';
 import type { RootStackParamList } from '../types';
+import { computeCartTotals } from '../utils/cartTotals';
 import { formatINR } from '../utils/currency';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
-
-const PLATFORM_FEE = 49;
-const GST_RATE = 0.18;
 
 export function CartScreen() {
   const navigation = useNavigation<Nav>();
   const { items, removeItem } = useCartStore();
   const insets = useSafeAreaInsets();
 
-  const subtotal = items.reduce((sum, item) => sum + item.linePrice, 0);
-  const platformFee = items.length > 0 ? PLATFORM_FEE : 0;
-  const gst = subtotal * GST_RATE;
-  const total = subtotal + platformFee + gst;
+  const { subtotal, platformFee, gst, total } = computeCartTotals(items);
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>

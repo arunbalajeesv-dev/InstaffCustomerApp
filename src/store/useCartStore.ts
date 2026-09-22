@@ -6,6 +6,7 @@ type CartState = {
   addItem: (item: Omit<CartItem, 'id'>) => string;
   updateItem: (id: string, item: Omit<CartItem, 'id'>) => void;
   removeItem: (id: string) => void;
+  clearCart: () => void;
 };
 
 function generateId(): string {
@@ -22,4 +23,5 @@ export const useCartStore = create<CartState>((set, get) => ({
   updateItem: (id, item) =>
     set({ items: get().items.map(existing => (existing.id === id ? { ...item, id } : existing)) }),
   removeItem: id => set({ items: get().items.filter(existing => existing.id !== id) }),
+  clearCart: () => set({ items: [] }),
 }));

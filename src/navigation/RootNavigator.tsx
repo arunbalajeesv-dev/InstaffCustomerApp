@@ -1,7 +1,9 @@
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { AddressScreen } from '../screens/AddressScreen';
+import { BookingConfirmationScreen } from '../screens/BookingConfirmationScreen';
 import { CartScreen } from '../screens/CartScreen';
+import { PaymentScreen } from '../screens/PaymentScreen';
 import { ServiceDetailScreen } from '../screens/ServiceDetailScreen';
 import { ServiceListScreen } from '../screens/ServiceListScreen';
 import { VentureTypeSelectorScreen } from '../screens/VentureTypeSelectorScreen';
@@ -20,6 +22,8 @@ export function RootNavigator() {
         <Stack.Screen name="ServiceDetail" component={ServiceDetailScreen} />
         <Stack.Screen name="Cart" component={CartScreen} />
         <Stack.Screen name="Address" component={AddressScreen} />
+        <Stack.Screen name="Payment" component={PaymentScreen} />
+        <Stack.Screen name="BookingConfirmation" component={BookingConfirmationScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );

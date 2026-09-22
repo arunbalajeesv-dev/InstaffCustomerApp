@@ -7,11 +7,23 @@ import ReactTestRenderer from 'react-test-renderer';
 import { Alert, Text, TextInput } from 'react-native';
 import { AddressScreen } from '../src/screens/AddressScreen';
 
+const mockNavigate = jest.fn();
+
 jest.mock('@react-navigation/native', () => ({
-  useNavigation: () => ({ goBack: jest.fn() }),
+  useNavigation: () => ({ navigate: mockNavigate, goBack: jest.fn() }),
+}));
+
+const mockCreateAddress = jest.fn();
+jest.mock('../src/services/addressesApi', () => ({
+  createAddress: (address: string) => mockCreateAddress(address),
 }));
 
 let currentTree: ReactTestRenderer.ReactTestRenderer | undefined;
+
+beforeEach(() => {
+  mockNavigate.mockClear();
+  mockCreateAddress.mockReset();
+});
 
 afterEach(() => {
   if (currentTree) {
@@ -30,8 +42,7 @@ function render() {
   return currentTree!;
 }
 
-test('shows a validation error and does not alert when submitted empty', async () => {
-  const alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+test('shows a validation error and does not save when submitted empty', async () => {
   const tree = render();
 
   await ReactTestRenderer.act(() => {
@@ -40,11 +51,12 @@ test('shows a validation error and does not alert when submitted empty', async (
 
   const errorText = tree.root.findAllByType(Text).map(t => t.props.children);
   expect(errorText).toContain('Please enter an address');
-  expect(alertSpy).not.toHaveBeenCalled();
+  expect(mockCreateAddress).not.toHaveBeenCalled();
+  expect(mockNavigate).not.toHaveBeenCalled();
 });
 
-test('submits successfully once an address is entered', async () => {
-  const alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+test('saves the address and navigates to Payment with its id', async () => {
+  mockCreateAddress.mockResolvedValue('address-123');
   const tree = render();
 
   const input = tree.root.findByType(TextInput);
@@ -52,12 +64,28 @@ test('submits successfully once an address is entered', async () => {
     input.props.onChangeText('221B Baker Street');
   });
 
-  await ReactTestRenderer.act(() => {
-    tree.root.findByProps({ testID: 'continueButton' }).props.onPress();
+  await ReactTestRenderer.act(async () => {
+    await tree.root.findByProps({ testID: 'continueButton' }).props.onPress();
   });
 
-  expect(alertSpy).toHaveBeenCalledWith(
-    'Address saved',
-    expect.stringContaining('221B Baker Street'),
-  );
+  expect(mockCreateAddress).toHaveBeenCalledWith('221B Baker Street');
+  expect(mockNavigate).toHaveBeenCalledWith('Payment', { addressId: 'address-123' });
+});
+
+test('shows an alert and does not navigate if saving the address fails', async () => {
+  const alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+  mockCreateAddress.mockRejectedValue(new Error('Network error'));
+  const tree = render();
+
+  const input = tree.root.findByType(TextInput);
+  await ReactTestRenderer.act(() => {
+    input.props.onChangeText('221B Baker Street');
+  });
+
+  await ReactTestRenderer.act(async () => {
+    await tree.root.findByProps({ testID: 'continueButton' }).props.onPress();
+  });
+
+  expect(alertSpy).toHaveBeenCalledWith("Couldn't save address", 'Network error');
+  expect(mockNavigate).not.toHaveBeenCalled();
 });
