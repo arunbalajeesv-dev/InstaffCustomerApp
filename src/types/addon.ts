@@ -1,7 +1,5 @@
-// Fetched without a service filter: treated as a general add-on catalog
-// rather than per-service, since the task didn't specify a scoping column.
-// If add-ons should be service-specific, add an .eq('service_id', ...) to
-// fetchAddons in addonsApi.ts.
+// Scoped to a service (addons.service_id is NOT NULL) — confirmed against
+// the real schema, not the earlier "global catalog" guess.
 export type Addon = {
   id: string;
   name: string;

@@ -25,7 +25,7 @@ export const useServiceDetailStore = create<ServiceDetailState>(set => ({
       const [tiers, scopeItems, addons] = await Promise.all([
         fetchPricingTiers(serviceId),
         fetchScopeItems(serviceId),
-        fetchAddons(),
+        fetchAddons(serviceId),
       ]);
       set({ tiers, scopeItems, addons, loading: false });
     } catch (e) {
