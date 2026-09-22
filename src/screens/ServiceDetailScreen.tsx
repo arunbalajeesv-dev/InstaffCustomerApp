@@ -13,16 +13,24 @@ import {
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AddonCard } from '../components/AddonCard';
+import { DateSelector } from '../components/DateSelector';
 import { Icon } from '../components/Icon';
 import { ScopeItemRow } from '../components/ScopeItemRow';
 import { ScreenHeader } from '../components/ScreenHeader';
 import { TierSelector } from '../components/TierSelector';
 import { TierSummaryCard } from '../components/TierSummaryCard';
+import { TimeSlotGrid } from '../components/TimeSlotGrid';
 import { useServiceDetailStore } from '../store/useServiceDetailStore';
 import { useServiceSelectionStore } from '../store/useServiceSelectionStore';
 import { colors, radius, spacing } from '../theme';
 import type { RootStackParamList } from '../types';
 import { formatINR } from '../utils/currency';
+import {
+  START_TIME_OPTIONS_MINUTES,
+  formatTimeOfDay,
+  getNext7Days,
+  isSlotDisabled,
+} from '../utils/time';
 
 type Route = RouteProp<RootStackParamList, 'ServiceDetail'>;
 
@@ -40,10 +48,15 @@ export function ServiceDetailScreen() {
     serviceId,
     selectedTierId,
     addonQuantities,
+    selectedDate,
+    selectedStartTime,
+    selectedEndTime,
     selectService,
     selectTier,
     incrementAddon,
     decrementAddon,
+    selectDate,
+    selectStartTime,
   } = useServiceSelectionStore();
 
   useEffect(() => {
@@ -55,6 +68,9 @@ export function ServiceDetailScreen() {
   // state left over from a previous ServiceDetail visit while it clears.
   const isCurrentService = serviceId === service.id;
   const activeTierId = isCurrentService ? selectedTierId : null;
+  const activeDate = isCurrentService ? selectedDate : null;
+  const activeStartTime = isCurrentService ? selectedStartTime : null;
+  const activeEndTime = isCurrentService ? selectedEndTime : null;
   const activeAddonQuantities = useMemo(
     () => (isCurrentService ? addonQuantities : {}),
     [isCurrentService, addonQuantities],
@@ -64,6 +80,48 @@ export function ServiceDetailScreen() {
     () => tiers.find(t => t.id === activeTierId),
     [tiers, activeTierId],
   );
+
+  // Fixed for the screen's lifetime so the "less than 2 hours away" cutoff
+  // (and the day list itself) doesn't shift mid-interaction.
+  const now = useMemo(() => new Date(), []);
+  const days = useMemo(() => getNext7Days(now), [now]);
+  const selectedDay = useMemo(() => days.find(d => d.key === activeDate), [days, activeDate]);
+
+  // Pre-select today so the time grid always has a day to disable slots
+  // against, rather than leaving "no date chosen" as an in-between state.
+  useEffect(() => {
+    if (isCurrentService && activeDate === null) {
+      selectDate(days[0].key);
+    }
+  }, [isCurrentService, activeDate, days, selectDate]);
+
+  const disabledMinutes = useMemo(() => {
+    if (!selectedDay) {
+      return new Set<number>();
+    }
+    return new Set(
+      START_TIME_OPTIONS_MINUTES.filter(m => isSlotDisabled(selectedDay.date, m, now)),
+    );
+  }, [selectedDay, now]);
+
+  // The start-time label is stored as formatted text, not raw minutes, so
+  // recover the minutes to recompute the end time if the tier (and so the
+  // duration) changes after a start time was already picked.
+  const selectedStartMinutes = useMemo(
+    () =>
+      START_TIME_OPTIONS_MINUTES.find(m => formatTimeOfDay(m) === activeStartTime) ?? null,
+    [activeStartTime],
+  );
+
+  useEffect(() => {
+    if (!isCurrentService || selectedStartMinutes === null || !selectedTier) {
+      return;
+    }
+    const endLabel = formatTimeOfDay(selectedStartMinutes + selectedTier.durationHours * 60);
+    if (endLabel !== activeEndTime) {
+      selectStartTime(formatTimeOfDay(selectedStartMinutes), endLabel);
+    }
+  }, [isCurrentService, selectedStartMinutes, selectedTier, activeEndTime, selectStartTime]);
 
   const addonsTotal = useMemo(
     () =>
@@ -77,6 +135,7 @@ export function ServiceDetailScreen() {
   const total = (selectedTier?.price ?? 0) + addonsTotal;
   const includedItems = scopeItems.filter(item => item.isIncluded);
   const excludedItems = scopeItems.filter(item => !item.isIncluded);
+  const canAddToCart = !!selectedTier && !!activeDate && !!activeStartTime;
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -164,6 +223,30 @@ export function ServiceDetailScreen() {
                 ))}
               </ScrollView>
             )}
+
+            <Text style={styles.sectionTitle}>Select a Slot</Text>
+            <DateSelector days={days} selectedKey={activeDate} onSelect={day => selectDate(day.key)} />
+            <View style={styles.timeGridSpacing}>
+              <TimeSlotGrid
+                minutesOptions={START_TIME_OPTIONS_MINUTES}
+                selectedMinutes={selectedStartMinutes}
+                disabledMinutes={disabledMinutes}
+                onSelect={minutes => {
+                  const startLabel = formatTimeOfDay(minutes);
+                  const endLabel = selectedTier
+                    ? formatTimeOfDay(minutes + selectedTier.durationHours * 60)
+                    : null;
+                  selectStartTime(startLabel, endLabel);
+                }}
+              />
+            </View>
+            {!!activeStartTime && (
+              <Text style={styles.slotSummary} testID="slotSummary">
+                {activeEndTime
+                  ? `Your shift will run ${activeStartTime} – ${activeEndTime}`
+                  : `Starts at ${activeStartTime} — select a facility size to see the end time.`}
+              </Text>
+            )}
           </>
         )}
       </ScrollView>
@@ -177,8 +260,8 @@ export function ServiceDetailScreen() {
         </View>
         <TouchableOpacity
           testID="addToCartButton"
-          style={[styles.cartButton, !selectedTier && styles.cartButtonDisabled]}
-          disabled={!selectedTier}
+          style={[styles.cartButton, !canAddToCart && styles.cartButtonDisabled]}
+          disabled={!canAddToCart}
           onPress={() => Alert.alert('Added to cart', `${service.name} added to your cart.`)}>
           <Text style={styles.cartButtonText}>Add to Cart</Text>
         </TouchableOpacity>
@@ -210,6 +293,8 @@ const styles = StyleSheet.create({
   emptyText: { fontSize: 13, color: colors.textMuted },
   summarySpacing: { marginTop: spacing.lg },
   addonsRow: { marginHorizontal: -spacing.lg, paddingHorizontal: spacing.lg },
+  timeGridSpacing: { marginTop: spacing.md },
+  slotSummary: { fontSize: 13, color: colors.textMuted, marginTop: spacing.md },
   bottomBar: {
     flexDirection: 'row',
     alignItems: 'center',

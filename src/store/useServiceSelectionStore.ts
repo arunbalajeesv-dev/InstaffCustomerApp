@@ -4,23 +4,42 @@ type ServiceSelectionState = {
   serviceId: string | null;
   selectedTierId: string | null;
   addonQuantities: Record<string, number>;
+  // Slot: chosen independently of the tier, but its end-time label depends on
+  // the tier's duration, so callers recompute and pass it in on any change.
+  selectedDate: string | null; // yyyy-mm-dd
+  selectedStartTime: string | null; // e.g. "9:00 AM"
+  selectedEndTime: string | null; // e.g. "12:00 PM"
   // Switching to a different service clears any in-progress selection;
   // re-entering the same one (e.g. back-then-forward) keeps it.
   selectService: (serviceId: string) => void;
   selectTier: (tierId: string) => void;
   incrementAddon: (addonId: string) => void;
   decrementAddon: (addonId: string) => void;
+  // Changing the date clears any chosen time, since a time picked on one day
+  // may no longer be valid (or disabled) on another.
+  selectDate: (date: string) => void;
+  selectStartTime: (startTime: string, endTime: string | null) => void;
 };
 
 export const useServiceSelectionStore = create<ServiceSelectionState>((set, get) => ({
   serviceId: null,
   selectedTierId: null,
   addonQuantities: {},
+  selectedDate: null,
+  selectedStartTime: null,
+  selectedEndTime: null,
   selectService: serviceId => {
     if (get().serviceId === serviceId) {
       return;
     }
-    set({ serviceId, selectedTierId: null, addonQuantities: {} });
+    set({
+      serviceId,
+      selectedTierId: null,
+      addonQuantities: {},
+      selectedDate: null,
+      selectedStartTime: null,
+      selectedEndTime: null,
+    });
   },
   selectTier: tierId => set({ selectedTierId: tierId }),
   incrementAddon: addonId =>
@@ -40,4 +59,8 @@ export const useServiceSelectionStore = create<ServiceSelectionState>((set, get)
       }
       return { addonQuantities: { ...state.addonQuantities, [addonId]: current - 1 } };
     }),
+  selectDate: date =>
+    set({ selectedDate: date, selectedStartTime: null, selectedEndTime: null }),
+  selectStartTime: (startTime, endTime) =>
+    set({ selectedStartTime: startTime, selectedEndTime: endTime }),
 }));

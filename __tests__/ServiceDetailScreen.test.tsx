@@ -7,6 +7,7 @@ import ReactTestRenderer from 'react-test-renderer';
 import { SafeAreaProvider, initialWindowMetrics } from 'react-native-safe-area-context';
 import { ServiceDetailScreen } from '../src/screens/ServiceDetailScreen';
 import { TierSelector } from '../src/components/TierSelector';
+import { TimeSlotGrid } from '../src/components/TimeSlotGrid';
 import { AddonCard } from '../src/components/AddonCard';
 import { useServiceSelectionStore } from '../src/store/useServiceSelectionStore';
 
@@ -38,19 +39,32 @@ jest.mock('../src/store/useServiceDetailStore', () => ({
 
 const initialSelectionState = useServiceSelectionStore.getState();
 
+// Fixed "now" so which time slots are disabled (<2h away) is deterministic:
+// 10:00 AM means 6–11 AM are disabled and 12 PM onward are not.
+const NOW = new Date(2024, 0, 15, 10, 0, 0);
+
+let currentTree: ReactTestRenderer.ReactTestRenderer | undefined;
+
 beforeEach(() => {
   useServiceSelectionStore.setState(initialSelectionState, true);
+  jest.useFakeTimers().setSystemTime(NOW);
+});
+
+afterEach(() => {
+  currentTree?.unmount();
+  currentTree = undefined;
+  jest.useRealTimers();
 });
 
 test('Add to Cart is disabled until a facility size is selected, then total updates live', async () => {
-  let tree: ReactTestRenderer.ReactTestRenderer;
   await ReactTestRenderer.act(() => {
-    tree = ReactTestRenderer.create(
+    currentTree = ReactTestRenderer.create(
       <SafeAreaProvider initialMetrics={initialWindowMetrics}>
         <ServiceDetailScreen />
       </SafeAreaProvider>,
     );
   });
+  const tree = currentTree;
 
   const cartButton = () => tree!.root.findByProps({ testID: 'addToCartButton' });
   const totalValue = () => tree!.root.findByProps({ testID: 'totalValue' }).props.children;
@@ -63,7 +77,6 @@ test('Add to Cart is disabled until a facility size is selected, then total upda
     tierSelector.props.onSelect('tier-small');
   });
 
-  expect(cartButton().props.disabled).toBe(false);
   expect(totalValue()).toBe('₹1,500');
 
   const addonCard = tree!.root.findByType(AddonCard);
@@ -83,4 +96,38 @@ test('Add to Cart is disabled until a facility size is selected, then total upda
 
   // tier (3000) + 2 x add-on (500) = 4000
   expect(totalValue()).toBe('₹4,000');
+});
+
+test('a slot is required in addition to a facility size before Add to Cart enables', async () => {
+  await ReactTestRenderer.act(() => {
+    currentTree = ReactTestRenderer.create(
+      <SafeAreaProvider initialMetrics={initialWindowMetrics}>
+        <ServiceDetailScreen />
+      </SafeAreaProvider>,
+    );
+  });
+  const tree = currentTree;
+
+  const cartButton = () => tree!.root.findByProps({ testID: 'addToCartButton' });
+  const tierSelector = tree!.root.findByType(TierSelector);
+  const timeGrid = () => tree!.root.findByType(TimeSlotGrid);
+
+  // Today auto-selects; 6–11 AM are within 2 hours of the fixed "now"
+  // (10:00 AM) and should be disabled, 12 PM onward should not be.
+  expect(timeGrid().props.disabledMinutes.has(6 * 60)).toBe(true);
+  expect(timeGrid().props.disabledMinutes.has(11 * 60)).toBe(true);
+  expect(timeGrid().props.disabledMinutes.has(12 * 60)).toBe(false);
+
+  await ReactTestRenderer.act(() => {
+    tierSelector.props.onSelect('tier-small'); // 2-hour duration
+  });
+  expect(cartButton().props.disabled).toBe(true); // tier alone isn't enough
+
+  await ReactTestRenderer.act(() => {
+    timeGrid().props.onSelect(12 * 60); // 12:00 PM
+  });
+
+  expect(cartButton().props.disabled).toBe(false);
+  const summary = tree!.root.findByProps({ testID: 'slotSummary' }).props.children;
+  expect(summary).toBe('Your shift will run 12:00 PM – 2:00 PM');
 });
