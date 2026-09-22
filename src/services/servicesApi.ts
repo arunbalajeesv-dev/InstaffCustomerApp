@@ -13,6 +13,25 @@ export async function fetchServices(): Promise<Service[]> {
   return (data ?? []) as Service[];
 }
 
+export async function fetchServicesByVentureType(
+  categoryName: string,
+  ventureTypeId: string,
+): Promise<Service[]> {
+  const { data, error } = await supabase
+    .from('services')
+    .select(
+      'id, name, category, description, ventureTypeId:venture_type_id, heroImageUrl:hero_image_url',
+    )
+    .eq('category', categoryName)
+    .eq('venture_type_id', ventureTypeId)
+    .eq('active', true)
+    .order('name');
+  if (error) {
+    throw new Error(error.message);
+  }
+  return (data ?? []) as Service[];
+}
+
 export function groupByCategory(services: Service[]): ServiceCategory[] {
   const map = new Map<string, Service[]>();
   for (const service of services) {

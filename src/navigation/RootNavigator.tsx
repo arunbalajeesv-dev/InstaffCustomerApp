@@ -1,5 +1,6 @@
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import { ServiceDetailScreen } from '../screens/ServiceDetailScreen';
 import { ServiceListScreen } from '../screens/ServiceListScreen';
 import { VentureTypeSelectorScreen } from '../screens/VentureTypeSelectorScreen';
 import type { RootStackParamList } from '../types';
@@ -14,6 +15,7 @@ export function RootNavigator() {
         <Stack.Screen name="Tabs" component={TabNavigator} />
         <Stack.Screen name="VentureTypeSelector" component={VentureTypeSelectorScreen} />
         <Stack.Screen name="ServiceList" component={ServiceListScreen} />
+        <Stack.Screen name="ServiceDetail" component={ServiceDetailScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );

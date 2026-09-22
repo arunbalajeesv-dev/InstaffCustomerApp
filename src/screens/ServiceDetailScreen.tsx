@@ -1,0 +1,233 @@
+import type { RouteProp } from '@react-navigation/native';
+import { useRoute } from '@react-navigation/native';
+import { useEffect, useMemo } from 'react';
+import {
+  ActivityIndicator,
+  Alert,
+  Image,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { AddonCard } from '../components/AddonCard';
+import { Icon } from '../components/Icon';
+import { ScopeItemRow } from '../components/ScopeItemRow';
+import { ScreenHeader } from '../components/ScreenHeader';
+import { TierSelector } from '../components/TierSelector';
+import { TierSummaryCard } from '../components/TierSummaryCard';
+import { useServiceDetailStore } from '../store/useServiceDetailStore';
+import { useServiceSelectionStore } from '../store/useServiceSelectionStore';
+import { colors, radius, spacing } from '../theme';
+import type { RootStackParamList } from '../types';
+import { formatINR } from '../utils/currency';
+
+type Route = RouteProp<RootStackParamList, 'ServiceDetail'>;
+
+// Rating isn't wired to real data yet — no reviews table exists — so this is
+// a static placeholder, not a live average.
+const PLACEHOLDER_RATING = 4.8;
+
+export function ServiceDetailScreen() {
+  const { params } = useRoute<Route>();
+  const { service } = params;
+  const insets = useSafeAreaInsets();
+
+  const { tiers, scopeItems, addons, loading, error, load } = useServiceDetailStore();
+  const {
+    serviceId,
+    selectedTierId,
+    addonQuantities,
+    selectService,
+    selectTier,
+    incrementAddon,
+    decrementAddon,
+  } = useServiceSelectionStore();
+
+  useEffect(() => {
+    load(service.id);
+    selectService(service.id);
+  }, [load, selectService, service.id]);
+
+  // Selection belongs to whichever service is currently active; ignore stale
+  // state left over from a previous ServiceDetail visit while it clears.
+  const isCurrentService = serviceId === service.id;
+  const activeTierId = isCurrentService ? selectedTierId : null;
+  const activeAddonQuantities = useMemo(
+    () => (isCurrentService ? addonQuantities : {}),
+    [isCurrentService, addonQuantities],
+  );
+
+  const selectedTier = useMemo(
+    () => tiers.find(t => t.id === activeTierId),
+    [tiers, activeTierId],
+  );
+
+  const addonsTotal = useMemo(
+    () =>
+      addons.reduce((sum, addon) => {
+        const qty = activeAddonQuantities[addon.id] ?? 0;
+        return sum + addon.price * qty;
+      }, 0),
+    [addons, activeAddonQuantities],
+  );
+
+  const total = (selectedTier?.price ?? 0) + addonsTotal;
+  const includedItems = scopeItems.filter(item => item.isIncluded);
+  const excludedItems = scopeItems.filter(item => !item.isIncluded);
+
+  return (
+    <SafeAreaView style={styles.container} edges={['top']}>
+      <ScreenHeader title={service.name} />
+
+      <ScrollView contentContainerStyle={styles.content}>
+        {service.heroImageUrl ? (
+          <Image source={{ uri: service.heroImageUrl }} style={styles.hero} resizeMode="cover" />
+        ) : (
+          <View style={[styles.hero, styles.heroPlaceholder]}>
+            <Icon name="image" size={32} color={colors.textMuted} />
+          </View>
+        )}
+
+        <Text style={styles.name}>{service.name}</Text>
+        <View style={styles.ratingRow}>
+          {[0, 1, 2, 3, 4].map(i => (
+            <Icon
+              key={i}
+              name="star"
+              size={16}
+              color={i < Math.round(PLACEHOLDER_RATING) ? '#F5A623' : colors.border}
+            />
+          ))}
+          <Text style={styles.ratingText}>{PLACEHOLDER_RATING.toFixed(1)}</Text>
+        </View>
+        {!!service.description && <Text style={styles.description}>{service.description}</Text>}
+
+        {loading && <ActivityIndicator color={colors.primary} style={styles.status} />}
+
+        {error && (
+          <View style={styles.status}>
+            <Text style={styles.error}>Couldn't load service details</Text>
+            <Text style={styles.errorDetail}>{error}</Text>
+            <TouchableOpacity onPress={() => load(service.id)}>
+              <Text style={styles.retry}>Try again</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {!loading && !error && (
+          <>
+            <Text style={styles.sectionTitle}>Facility Size</Text>
+            {tiers.length === 0 ? (
+              <Text style={styles.emptyText}>No pricing tiers available yet.</Text>
+            ) : (
+              <TierSelector tiers={tiers} selectedTierId={activeTierId} onSelect={selectTier} />
+            )}
+
+            <View style={styles.summarySpacing}>
+              <TierSummaryCard tier={selectedTier} />
+            </View>
+
+            <Text style={styles.sectionTitle}>What's Included</Text>
+            {includedItems.length === 0 ? (
+              <Text style={styles.emptyText}>Nothing listed yet.</Text>
+            ) : (
+              includedItems.map(item => (
+                <ScopeItemRow key={item.id} description={item.description} included />
+              ))
+            )}
+
+            <Text style={styles.sectionTitle}>What's Not Included</Text>
+            {excludedItems.length === 0 ? (
+              <Text style={styles.emptyText}>Nothing listed yet.</Text>
+            ) : (
+              excludedItems.map(item => (
+                <ScopeItemRow key={item.id} description={item.description} included={false} />
+              ))
+            )}
+
+            <Text style={styles.sectionTitle}>Add-ons</Text>
+            {addons.length === 0 ? (
+              <Text style={styles.emptyText}>No add-ons available yet.</Text>
+            ) : (
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.addonsRow}>
+                {addons.map(addon => (
+                  <AddonCard
+                    key={addon.id}
+                    addon={addon}
+                    quantity={activeAddonQuantities[addon.id] ?? 0}
+                    onIncrement={() => incrementAddon(addon.id)}
+                    onDecrement={() => decrementAddon(addon.id)}
+                  />
+                ))}
+              </ScrollView>
+            )}
+          </>
+        )}
+      </ScrollView>
+
+      <View style={[styles.bottomBar, { paddingBottom: insets.bottom + spacing.md }]}>
+        <View>
+          <Text style={styles.totalLabel}>Total</Text>
+          <Text style={styles.totalValue} testID="totalValue">
+            {formatINR(total)}
+          </Text>
+        </View>
+        <TouchableOpacity
+          testID="addToCartButton"
+          style={[styles.cartButton, !selectedTier && styles.cartButtonDisabled]}
+          disabled={!selectedTier}
+          onPress={() => Alert.alert('Added to cart', `${service.name} added to your cart.`)}>
+          <Text style={styles.cartButtonText}>Add to Cart</Text>
+        </TouchableOpacity>
+      </View>
+    </SafeAreaView>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: { flex: 1, backgroundColor: colors.background },
+  content: { padding: spacing.lg, paddingBottom: spacing.xl },
+  hero: { width: '100%', height: 180, borderRadius: radius.lg, backgroundColor: colors.surface },
+  heroPlaceholder: { alignItems: 'center', justifyContent: 'center' },
+  name: { fontSize: 22, fontWeight: '700', color: colors.text, marginTop: spacing.lg },
+  ratingRow: { flexDirection: 'row', alignItems: 'center', marginTop: spacing.xs, gap: 2 },
+  ratingText: { fontSize: 13, color: colors.textMuted, marginLeft: spacing.xs },
+  description: { fontSize: 14, color: colors.textMuted, marginTop: spacing.sm, lineHeight: 20 },
+  status: { marginTop: spacing.lg },
+  error: { fontSize: 15, fontWeight: '600', color: colors.text },
+  errorDetail: { fontSize: 13, color: colors.textMuted, marginTop: spacing.xs },
+  retry: { color: colors.primary, fontWeight: '600', marginTop: spacing.sm },
+  sectionTitle: {
+    fontSize: 17,
+    fontWeight: '700',
+    color: colors.text,
+    marginTop: spacing.xl,
+    marginBottom: spacing.md,
+  },
+  emptyText: { fontSize: 13, color: colors.textMuted },
+  summarySpacing: { marginTop: spacing.lg },
+  addonsRow: { marginHorizontal: -spacing.lg, paddingHorizontal: spacing.lg },
+  bottomBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.md,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+    backgroundColor: colors.background,
+  },
+  totalLabel: { fontSize: 12, color: colors.textMuted },
+  totalValue: { fontSize: 20, fontWeight: '700', color: colors.text },
+  cartButton: {
+    backgroundColor: colors.primary,
+    borderRadius: radius.md,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.xl,
+  },
+  cartButtonDisabled: { backgroundColor: colors.border },
+  cartButtonText: { color: '#FFFFFF', fontWeight: '700', fontSize: 15 },
+});

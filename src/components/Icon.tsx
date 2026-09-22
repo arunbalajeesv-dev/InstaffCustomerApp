@@ -8,7 +8,11 @@ export type IconName =
   | 'pin'
   | 'search'
   | 'chevronLeft'
-  | 'chevronRight';
+  | 'chevronRight'
+  | 'check'
+  | 'close'
+  | 'star'
+  | 'image';
 
 type Props = { name: IconName; size?: number; color?: string };
 
@@ -57,6 +61,22 @@ export function Icon({ name, size = 24, color = '#1A1A1A' }: Props) {
       )}
       {name === 'chevronLeft' && <Path d="M15 18l-6-6 6-6" />}
       {name === 'chevronRight' && <Path d="M9 18l6-6-6-6" />}
+      {name === 'check' && <Path d="M20 6L9 17l-4-4" />}
+      {name === 'close' && <Path d="M18 6L6 18M6 6l12 12" />}
+      {name === 'star' && (
+        <Path
+          fill={color}
+          stroke="none"
+          d="M12 2l3.09 6.26L22 9.27l-5 4.87L18.18 21 12 17.77 5.82 21 7 14.14 2 9.27l6.91-1.01L12 2z"
+        />
+      )}
+      {name === 'image' && (
+        <>
+          <Rect x={3} y={3} width={18} height={18} rx={2} />
+          <Circle cx={8.5} cy={8.5} r={1.5} />
+          <Path d="M21 15l-5-5L5 21" />
+        </>
+      )}
     </Svg>
   );
 }

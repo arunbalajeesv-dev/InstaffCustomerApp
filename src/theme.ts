@@ -1,6 +1,7 @@
 export const colors = {
   primary: '#0A9B80',
   primaryLight: '#E6F5F2',
+  danger: '#E0413B',
   background: '#FFFFFF',
   text: '#1A1A1A',
   textMuted: '#6B7280',

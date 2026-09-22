@@ -3,6 +3,8 @@ export type Service = {
   name: string;
   category: string;
   description?: string | null;
+  ventureTypeId?: string;
+  heroImageUrl?: string | null;
 };
 
 export type ServiceCategory = {

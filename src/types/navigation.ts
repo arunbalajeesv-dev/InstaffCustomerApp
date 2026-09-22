@@ -1,4 +1,5 @@
 import type { NavigatorScreenParams } from '@react-navigation/native';
+import type { Service } from './service';
 import type { VentureType } from './ventureType';
 
 export type TabParamList = {
@@ -12,4 +13,5 @@ export type RootStackParamList = {
   Tabs: NavigatorScreenParams<TabParamList>;
   VentureTypeSelector: { categoryName: string };
   ServiceList: { categoryName: string; ventureType: VentureType };
+  ServiceDetail: { service: Service };
 };

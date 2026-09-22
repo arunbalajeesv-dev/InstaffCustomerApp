@@ -1,5 +1,6 @@
 module.exports = {
   preset: '@react-native/jest-preset',
+  setupFiles: ['./jest.setup.js'],
   // The preset's default pattern only transforms react-native packages, but
   // React Navigation, Supabase and their sub-dependencies ship ESM too.
   // Rather than list every one, transform all of node_modules.
