@@ -1,3 +1,5 @@
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { useNavigation } from '@react-navigation/native';
 import { useEffect } from 'react';
 import {
   ActivityIndicator,
@@ -15,8 +17,12 @@ import { TopBar } from '../components/TopBar';
 import { useAppStore } from '../store/useAppStore';
 import { useServicesStore } from '../store/useServicesStore';
 import { colors, spacing } from '../theme';
+import type { RootStackParamList } from '../types';
+
+type Nav = NativeStackNavigationProp<RootStackParamList>;
 
 export function HomeScreen() {
+  const navigation = useNavigation<Nav>();
   const businessName = useAppStore(s => s.businessName);
   const { categories, loading, error, loadServices } = useServicesStore();
 
@@ -57,7 +63,12 @@ export function HomeScreen() {
         ListHeaderComponent={header}
         columnWrapperStyle={styles.row}
         contentContainerStyle={styles.list}
-        renderItem={({ item }) => <CategoryCard category={item} />}
+        renderItem={({ item }) => (
+          <CategoryCard
+            category={item}
+            onPress={() => navigation.navigate('VentureTypeSelector', { categoryName: item.name })}
+          />
+        )}
       />
     </SafeAreaView>
   );

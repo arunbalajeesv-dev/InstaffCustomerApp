@@ -6,7 +6,9 @@ export type IconName =
   | 'navigation'
   | 'user'
   | 'pin'
-  | 'search';
+  | 'search'
+  | 'chevronLeft'
+  | 'chevronRight';
 
 type Props = { name: IconName; size?: number; color?: string };
 
@@ -53,6 +55,8 @@ export function Icon({ name, size = 24, color = '#1A1A1A' }: Props) {
           <Path d="M21 21l-4.35-4.35" />
         </>
       )}
+      {name === 'chevronLeft' && <Path d="M15 18l-6-6 6-6" />}
+      {name === 'chevronRight' && <Path d="M9 18l6-6-6-6" />}
     </Svg>
   );
 }

@@ -1,11 +1,17 @@
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { colors, radius, spacing } from '../theme';
 import type { ServiceCategory } from '../types';
 
-export function CategoryCard({ category }: { category: ServiceCategory }) {
+export function CategoryCard({
+  category,
+  onPress,
+}: {
+  category: ServiceCategory;
+  onPress: () => void;
+}) {
   const count = category.services.length;
   return (
-    <View style={styles.card}>
+    <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.7}>
       <View style={styles.badge}>
         <Text style={styles.initial}>{category.name.charAt(0).toUpperCase()}</Text>
       </View>
@@ -15,7 +21,7 @@ export function CategoryCard({ category }: { category: ServiceCategory }) {
       <Text style={styles.count}>
         {count} {count === 1 ? 'service' : 'services'}
       </Text>
-    </View>
+    </TouchableOpacity>
   );
 }
 
