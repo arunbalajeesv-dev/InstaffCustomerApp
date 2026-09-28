@@ -13,6 +13,17 @@ import { AddonCard } from '../src/components/AddonCard';
 import { useServiceSelectionStore } from '../src/store/useServiceSelectionStore';
 import { useCartStore } from '../src/store/useCartStore';
 
+const mockTrackServiceViewed = jest.fn();
+const mockTrackAddonAdded = jest.fn();
+const mockTrackSlotSelected = jest.fn();
+const mockTrackAddToCart = jest.fn();
+jest.mock('../src/services/analytics', () => ({
+  trackServiceViewed: (...args: unknown[]) => mockTrackServiceViewed(...args),
+  trackAddonAdded: (...args: unknown[]) => mockTrackAddonAdded(...args),
+  trackSlotSelected: (...args: unknown[]) => mockTrackSlotSelected(...args),
+  trackAddToCart: (...args: unknown[]) => mockTrackAddToCart(...args),
+}));
+
 const mockNavigate = jest.fn();
 let mockEditCartItemId: string | undefined;
 
@@ -60,6 +71,10 @@ let currentTree: ReactTestRenderer.ReactTestRenderer | undefined;
 
 beforeEach(() => {
   mockNavigate.mockClear();
+  mockTrackServiceViewed.mockClear();
+  mockTrackAddonAdded.mockClear();
+  mockTrackSlotSelected.mockClear();
+  mockTrackAddToCart.mockClear();
   mockEditCartItemId = undefined;
   useServiceSelectionStore.setState(initialSelectionState, true);
   useCartStore.setState({ items: [] });
@@ -93,6 +108,7 @@ test('Add to Cart is disabled until a facility size is selected, then total upda
   const cartButton = () => tree.root.findByProps({ testID: 'addToCartButton' });
   const totalValue = () => tree.root.findByProps({ testID: 'totalValue' }).props.children;
 
+  expect(mockTrackServiceViewed).toHaveBeenCalledWith('svc-1', 'Opening/Closing Cleaning');
   expect(cartButton().props.disabled).toBe(true);
   expect(totalValue()).toBe('₹0');
 
@@ -113,6 +129,8 @@ test('Add to Cart is disabled until a facility size is selected, then total upda
 
   // tier (1500) + 2 x add-on (500) = 2500
   expect(totalValue()).toBe('₹2,500');
+  expect(mockTrackAddonAdded).toHaveBeenCalledTimes(2);
+  expect(mockTrackAddonAdded).toHaveBeenCalledWith('addon-1', 'Deep Clean Extra', 'svc-1');
 
   await ReactTestRenderer.act(() => {
     tierSelector.props.onSelect('tier-large');
@@ -145,6 +163,7 @@ test('a slot is required in addition to a facility size before Add to Cart enabl
   });
 
   expect(cartButton().props.disabled).toBe(false);
+  expect(mockTrackSlotSelected).toHaveBeenCalledWith('svc-1', '2024-01-15', '12:00 PM');
   const summary = tree.root.findByProps({ testID: 'slotSummary' }).props.children;
   expect(summary).toBe('Your shift will run 12:00 PM – 2:00 PM');
 });
@@ -166,6 +185,7 @@ test('Add to Cart saves the configured item to the cart store and navigates to C
   });
 
   expect(mockNavigate).toHaveBeenCalledWith('Cart');
+  expect(mockTrackAddToCart).toHaveBeenCalledWith('svc-1', 'Opening/Closing Cleaning', 1500);
   const items = useCartStore.getState().items;
   expect(items).toHaveLength(1);
   expect(items[0]).toMatchObject({

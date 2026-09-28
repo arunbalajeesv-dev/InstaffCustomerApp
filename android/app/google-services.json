@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "555745457343",
+    "project_id": "instaff-b5cbe",
+    "storage_bucket": "instaff-b5cbe.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:555745457343:android:6e5597a42ad3d48379020a",
+        "android_client_info": {
+          "package_name": "com.instaffcustomerapp"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDuNK-IyKKxl5jADgzDeilPvUwmExOfEQg"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

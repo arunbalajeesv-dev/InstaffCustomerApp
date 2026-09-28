@@ -10,6 +10,8 @@ export type TabParamList = {
 };
 
 export type RootStackParamList = {
+  Login: undefined;
+  Otp: { phone: string };
   Tabs: NavigatorScreenParams<TabParamList>;
   VentureTypeSelector: { categoryName: string };
   ServiceList: { categoryName: string; ventureType: VentureType };

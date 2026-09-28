@@ -4,6 +4,7 @@ import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-nati
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { CartItemCard } from '../components/CartItemCard';
 import { ScreenHeader } from '../components/ScreenHeader';
+import { trackCheckoutStarted } from '../services/analytics';
 import { useCartStore } from '../store/useCartStore';
 import { colors, radius, spacing } from '../theme';
 import type { RootStackParamList } from '../types';
@@ -67,7 +68,10 @@ export function CartScreen() {
             <TouchableOpacity
               testID="proceedButton"
               style={styles.proceedButton}
-              onPress={() => navigation.navigate('Address')}>
+              onPress={() => {
+                trackCheckoutStarted(total, items.length);
+                navigation.navigate('Address');
+              }}>
               <Text style={styles.proceedButtonText}>Proceed</Text>
             </TouchableOpacity>
           </View>

@@ -20,6 +20,7 @@ import { ScreenHeader } from '../components/ScreenHeader';
 import { TierSelector } from '../components/TierSelector';
 import { TierSummaryCard } from '../components/TierSummaryCard';
 import { TimeSlotGrid } from '../components/TimeSlotGrid';
+import { trackAddonAdded, trackAddToCart, trackServiceViewed, trackSlotSelected } from '../services/analytics';
 import { useCartStore } from '../store/useCartStore';
 import { useServiceDetailStore } from '../store/useServiceDetailStore';
 import { useServiceSelectionStore } from '../store/useServiceSelectionStore';
@@ -68,6 +69,7 @@ export function ServiceDetailScreen() {
   } = useServiceSelectionStore();
 
   useEffect(() => {
+    trackServiceViewed(service.id, service.name);
     load(service.id);
     const editingItem = editCartItemId
       ? cartItems.find(i => i.id === editCartItemId)
@@ -197,6 +199,7 @@ export function ServiceDetailScreen() {
     } else {
       addItem(item);
     }
+    trackAddToCart(service.id, service.name, total);
     navigation.navigate('Cart');
   };
 
@@ -280,7 +283,10 @@ export function ServiceDetailScreen() {
                     key={addon.id}
                     addon={addon}
                     quantity={activeAddonQuantities[addon.id] ?? 0}
-                    onIncrement={() => incrementAddon(addon.id)}
+                    onIncrement={() => {
+                      trackAddonAdded(addon.id, addon.name, service.id);
+                      incrementAddon(addon.id);
+                    }}
                     onDecrement={() => decrementAddon(addon.id)}
                   />
                 ))}
@@ -299,6 +305,9 @@ export function ServiceDetailScreen() {
                   const endLabel = selectedTier
                     ? formatTimeOfDay(minutes + selectedTier.durationHours * 60)
                     : null;
+                  if (activeDate) {
+                    trackSlotSelected(service.id, activeDate, startLabel);
+                  }
                   selectStartTime(startLabel, endLabel);
                 }}
               />

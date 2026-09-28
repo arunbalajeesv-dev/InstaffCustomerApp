@@ -14,6 +14,7 @@ import { CategoryCard } from '../components/CategoryCard';
 import { PromoBanner } from '../components/PromoBanner';
 import { SearchBar } from '../components/SearchBar';
 import { TopBar } from '../components/TopBar';
+import { trackCategorySelected } from '../services/analytics';
 import { useAppStore } from '../store/useAppStore';
 import { useServicesStore } from '../store/useServicesStore';
 import { colors, spacing } from '../theme';
@@ -66,7 +67,10 @@ export function HomeScreen() {
         renderItem={({ item }) => (
           <CategoryCard
             category={item}
-            onPress={() => navigation.navigate('VentureTypeSelector', { categoryName: item.name })}
+            onPress={() => {
+              trackCategorySelected(item.name);
+              navigation.navigate('VentureTypeSelector', { categoryName: item.name });
+            }}
           />
         )}
       />

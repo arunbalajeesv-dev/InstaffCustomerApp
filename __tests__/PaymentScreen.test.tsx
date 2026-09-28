@@ -6,6 +6,7 @@ import React from 'react';
 import ReactTestRenderer from 'react-test-renderer';
 import { Alert } from 'react-native';
 import { PaymentScreen } from '../src/screens/PaymentScreen';
+import { useAuthStore } from '../src/store/useAuthStore';
 import { useCartStore } from '../src/store/useCartStore';
 
 const mockNavigate = jest.fn();
@@ -22,6 +23,12 @@ const mockCreateBooking = jest.fn();
 jest.mock('../src/services/bookingsApi', () => ({
   validateSlots: (...args: unknown[]) => mockValidateSlots(...args),
   createBooking: (...args: unknown[]) => mockCreateBooking(...args),
+}));
+
+const mockTrackPaymentCompleted = jest.fn();
+jest.mock('../src/services/analytics', () => ({
+  trackPaymentCompleted: (bookingId: string, value: number) =>
+    mockTrackPaymentCompleted(bookingId, value),
 }));
 
 const service = { id: 'svc-1', name: 'Opening/Closing Cleaning', category: 'Cleaning' };
@@ -47,6 +54,7 @@ const item = {
   linePrice: 1500,
 };
 
+const initialAuthState = useAuthStore.getState();
 let currentTree: ReactTestRenderer.ReactTestRenderer | undefined;
 
 beforeEach(() => {
@@ -55,7 +63,12 @@ beforeEach(() => {
   mockGoBack.mockClear();
   mockValidateSlots.mockReset();
   mockCreateBooking.mockReset();
+  mockTrackPaymentCompleted.mockClear();
   useCartStore.setState({ items: [item] });
+  useAuthStore.setState(
+    { ...initialAuthState, supabaseUser: { id: 'user-1', contactName: 'Test Customer' } },
+    true,
+  );
 });
 
 afterEach(() => {
@@ -143,12 +156,14 @@ test('Pay Now waits, creates the booking, clears the cart, and resets to Booking
     [item],
     'address-123',
     expect.objectContaining({ total: 1819 }),
+    'user-1',
   );
   expect(useCartStore.getState().items).toHaveLength(0);
   expect(mockReset).toHaveBeenCalledWith({
     index: 0,
     routes: [{ name: 'BookingConfirmation', params: { bookingId: 'booking-456', total: 1819 } }],
   });
+  expect(mockTrackPaymentCompleted).toHaveBeenCalledWith('booking-456', 1819);
 
   jest.useRealTimers();
 });
@@ -171,6 +186,7 @@ test('Pay Now shows an alert and stays on the screen if booking creation fails',
   expect(mockReset).not.toHaveBeenCalled();
   expect(useCartStore.getState().items).toHaveLength(1); // cart NOT cleared
   expect(tree.root.findByProps({ testID: 'payNowButton' }).props.disabled).toBe(false);
+  expect(mockTrackPaymentCompleted).not.toHaveBeenCalled();
 
   jest.useRealTimers();
 });

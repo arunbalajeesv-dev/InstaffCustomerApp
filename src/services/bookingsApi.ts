@@ -1,4 +1,3 @@
-import { TEST_USER_ID } from '../config/testUser';
 import type { CartItem } from '../types';
 import { supabase } from './supabase';
 
@@ -34,11 +33,12 @@ export async function createBooking(
   items: CartItem[],
   addressId: string,
   totals: { subtotal: number; platformFee: number; gst: number; total: number },
+  userId: string,
 ): Promise<string> {
   const { data: booking, error: bookingError } = await supabase
     .from('bookings')
     .insert({
-      user_id: TEST_USER_ID,
+      user_id: userId,
       address_id: addressId,
       subtotal: totals.subtotal,
       platform_fee: totals.platformFee,

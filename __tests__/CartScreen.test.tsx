@@ -9,6 +9,12 @@ import { CartScreen } from '../src/screens/CartScreen';
 import { CartItemCard } from '../src/components/CartItemCard';
 import { useCartStore } from '../src/store/useCartStore';
 
+const mockTrackCheckoutStarted = jest.fn();
+jest.mock('../src/services/analytics', () => ({
+  trackCheckoutStarted: (value: number, numItems: number) =>
+    mockTrackCheckoutStarted(value, numItems),
+}));
+
 const mockNavigate = jest.fn();
 
 jest.mock('@react-navigation/native', () => ({
@@ -112,4 +118,5 @@ test('Proceed navigates to the Address screen', () => {
   });
 
   expect(mockNavigate).toHaveBeenCalledWith('Address');
+  expect(mockTrackCheckoutStarted).toHaveBeenCalledWith(2999, 1);
 });

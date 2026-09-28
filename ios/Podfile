@@ -8,6 +8,22 @@ require Pod::Executable.execute_command('node', ['-p',
 platform :ios, min_ios_version_supported
 prepare_react_native_project!
 
+# react-native-firebase resolves Firebase via Swift Package Manager by
+# default, whose products collide at link time with this project's default
+# static-library linkage (no `use_frameworks!` set below). Opt out of SPM so
+# Firebase resolves through regular CocoaPods pods instead.
+$RNFirebaseDisableSPM = true
+
+# Analytics only needs event counts, not advertising IDs — skipping the IDFA
+# variant avoids App Tracking Transparency prompts and the matching App Store
+# privacy disclosures.
+$RNFirebaseAnalyticsWithoutAdIdSupport = true
+
+# Firebase's Swift pods (FirebaseAuth, etc.) need module maps to be
+# importable from Swift when built as static libraries — Firebase's own
+# documented requirement for this setup.
+use_modular_headers!
+
 linkage = ENV['USE_FRAMEWORKS']
 if linkage != nil
   Pod::UI.puts "Configuring Pod with #{linkage}ally linked Frameworks".green
@@ -30,5 +46,29 @@ target 'InstaffCustomerApp' do
       :mac_catalyst_enabled => false,
       # :ccache_enabled => true
     )
+
+    # RNFB* modules import Firebase.h, which conditionally pulls in
+    # <FirebaseAuth/FirebaseAuth.h> (when Auth is present) without the pod
+    # declaring a dependency on it, so under static linkage they get neither
+    # FirebaseAuth's generated Swift header path nor build ordering after it.
+    # Supply both.
+    installer.pods_project.targets.each do |target|
+      next unless target.name.start_with?('RNFB')
+      auth_target = installer.pods_project.targets.find { |t| t.name == 'FirebaseAuth' }
+      target.add_dependency(auth_target) if auth_target
+      # Firebase.h imports <FirebaseAuth/FirebaseAuth-Swift.h>, but the
+      # generated Swift header lives under a "Swift Compatibility Header"
+      # folder — bridge the two with a forwarding header (include_next so it
+      # skips itself and finds the real one).
+      shim_dir = File.join(installer.sandbox.root.to_s, 'RNFBShims', 'FirebaseAuth')
+      FileUtils.mkdir_p(shim_dir)
+      File.write(File.join(shim_dir, 'FirebaseAuth-Swift.h'), "#include_next \"FirebaseAuth-Swift.h\"\n")
+      target.build_configurations.each do |bc|
+        paths = Array(bc.build_settings['HEADER_SEARCH_PATHS'] || '$(inherited)')
+        paths << '"${PODS_ROOT}/RNFBShims"'
+        paths << '"${PODS_CONFIGURATION_BUILD_DIR}/FirebaseAuth/Swift Compatibility Header"'
+        bc.build_settings['HEADER_SEARCH_PATHS'] = paths
+      end
+    end
   end
 end

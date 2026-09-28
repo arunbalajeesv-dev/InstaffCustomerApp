@@ -7,6 +7,11 @@ import ReactTestRenderer from 'react-test-renderer';
 import { HomeScreen } from '../src/screens/HomeScreen';
 import { CategoryCard } from '../src/components/CategoryCard';
 
+const mockTrackCategorySelected = jest.fn();
+jest.mock('../src/services/analytics', () => ({
+  trackCategorySelected: (categoryName: string) => mockTrackCategorySelected(categoryName),
+}));
+
 const mockNavigate = jest.fn();
 
 jest.mock('@react-navigation/native', () => ({
@@ -46,4 +51,5 @@ test('tapping a category card navigates to VentureTypeSelector with the category
   expect(mockNavigate).toHaveBeenCalledWith('VentureTypeSelector', {
     categoryName: 'Cleaning',
   });
+  expect(mockTrackCategorySelected).toHaveBeenCalledWith('Cleaning');
 });

@@ -5,3 +5,4 @@ export * from './pricingTier';
 export * from './scopeItem';
 export * from './addon';
 export * from './cart';
+export * from './user';

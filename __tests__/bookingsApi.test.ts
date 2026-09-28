@@ -3,7 +3,8 @@
  */
 
 import { createBooking, validateSlots } from '../src/services/bookingsApi';
-import { TEST_USER_ID } from '../src/config/testUser';
+
+const USER_ID = 'user-1';
 
 const mockInvoke = jest.fn();
 const mockInsertBookings = jest.fn();
@@ -105,12 +106,12 @@ describe('createBooking', () => {
     mockInsertBookings.mockResolvedValue({ data: { id: 'booking-1' }, error: null });
     mockInsertBookingItems.mockResolvedValue({ error: null });
 
-    const bookingId = await createBooking([item], 'address-1', totals);
+    const bookingId = await createBooking([item], 'address-1', totals, USER_ID);
 
     expect(bookingId).toBe('booking-1');
     expect(mockInsertBookings).toHaveBeenCalledWith(
       expect.objectContaining({
-        user_id: TEST_USER_ID,
+        user_id: USER_ID,
         address_id: 'address-1',
         subtotal: 2500,
         platform_fee: 49,
@@ -138,7 +139,9 @@ describe('createBooking', () => {
   test('throws if the booking insert fails', async () => {
     mockInsertBookings.mockResolvedValue({ data: null, error: { message: 'insert failed' } });
 
-    await expect(createBooking([item], 'address-1', totals)).rejects.toThrow('insert failed');
+    await expect(createBooking([item], 'address-1', totals, USER_ID)).rejects.toThrow(
+      'insert failed',
+    );
     expect(mockInsertBookingItems).not.toHaveBeenCalled();
   });
 
@@ -146,7 +149,7 @@ describe('createBooking', () => {
     mockInsertBookings.mockResolvedValue({ data: { id: 'booking-1' }, error: null });
     mockInsertBookingItems.mockResolvedValue({ error: { message: 'items insert failed' } });
 
-    await expect(createBooking([item], 'address-1', totals)).rejects.toThrow(
+    await expect(createBooking([item], 'address-1', totals, USER_ID)).rejects.toThrow(
       'Booking created but items failed to save: items insert failed',
     );
   });

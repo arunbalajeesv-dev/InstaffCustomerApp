@@ -6,7 +6,9 @@ import { ActivityIndicator, Alert, ScrollView, StyleSheet, Text, TouchableOpacit
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { CartItemCard } from '../components/CartItemCard';
 import { ScreenHeader } from '../components/ScreenHeader';
+import { trackPaymentCompleted } from '../services/analytics';
 import { createBooking, validateSlots } from '../services/bookingsApi';
+import { useAuthStore } from '../store/useAuthStore';
 import { useCartStore } from '../store/useCartStore';
 import { colors, radius, spacing } from '../theme';
 import type { CartItem, RootStackParamList } from '../types';
@@ -26,6 +28,7 @@ export function PaymentScreen() {
   const navigation = useNavigation<Nav>();
   const { params } = useRoute<Route>();
   const insets = useSafeAreaInsets();
+  const userId = useAuthStore(s => s.supabaseUser?.id);
   const { items, clearCart } = useCartStore();
   const [phase, setPhase] = useState<Phase>('validating');
   const [validationError, setValidationError] = useState<string | null>(null);
@@ -76,10 +79,14 @@ export function PaymentScreen() {
   }, []);
 
   const handlePayNow = async () => {
+    if (!userId) {
+      return;
+    }
     setPhase('paying');
     try {
       await new Promise<void>(resolve => setTimeout(resolve, MOCK_PAYMENT_DELAY_MS));
-      const bookingId = await createBooking(items, params.addressId, totals);
+      const bookingId = await createBooking(items, params.addressId, totals, userId);
+      trackPaymentCompleted(bookingId, totals.total);
       clearCart();
       navigation.reset({
         index: 0,

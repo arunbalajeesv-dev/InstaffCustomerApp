@@ -61,6 +61,9 @@ yarn-error.log
 
 # Ruby / CocoaPods
 **/Pods/
+
+# Supabase CLI local cache (machine-specific, regenerated on `supabase link`)
+supabase/.temp/
 /vendor/bundle/
 
 # Temporary files created by Metro to check the health of the file watcher
